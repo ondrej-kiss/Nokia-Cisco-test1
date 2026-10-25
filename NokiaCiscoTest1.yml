@@ -1,0 +1,33 @@
+name: NokiaCiscoTest1
+
+mgmt:
+  network: custom_mgmt
+  bridge: mybridge
+  ipv4-subnet: 172.20.22.0/24
+topology:
+  kinds:
+    cisco_xrd:
+      image: aspa:latest
+      env:
+        CLAB_MGMT_VRF: Mgmt-intf
+    nokia_srsim:
+      image: localhost/nokia/srsim:26.7.R1
+      license: /home/onkiss/Simulations6/lic-26
+  nodes:
+    r11:
+      kind: cisco_xrd
+      group: 10
+      startup-delay: 10
+      mgmt-ipv4: 172.20.22.11
+      ports:
+        - 22011:22
+    r13:
+      kind: nokia_srsim
+      group: 10
+      startup-delay: 30
+      mgmt-ipv4: 172.20.22.13
+      type: SR-1s
+      ports:
+        - 22013:22
+  links:
+    - endpoints: ["r11:Gi0-0-0-1", "r13:1/1/c1/1"]
