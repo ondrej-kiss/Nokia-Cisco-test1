@@ -1,0 +1,260 @@
+2026-11-15 23:02:17 INFO    IS-IS lab change: r11 (IOS-XR) <-> r13 (SR OS)   mode=check
+2026-11-15 23:02:17 INFO    Log file: logs/isis_lab_check_20261115-230217.log
+2026-11-15 23:02:17 INFO    Design: area 49.0001, level-2 only, point-to-point link, wide metrics, loopbacks advertised as passive
+2026-11-15 23:02:17 INFO      r11: loopback 10.0.0.11/32 on Loopback0, link GigabitEthernet0/0/0/1, NET 49.0001.0100.0000.0011.00
+2026-11-15 23:02:17 INFO      r13: loopback 10.0.0.13/32 on loopback0, link port 1/1/c1/1, NET 49.0001.0100.0000.0013.00
+2026-11-15 23:02:17 INFO    ==============================================================================
+2026-11-15 23:02:17 INFO    STEP 1: Connect and identify routers
+2026-11-15 23:02:17 INFO    ==============================================================================
+2026-11-15 23:02:17 INFO      Read devices.csv, open an SSH session to each device and match it to r11/r13 by hostname taken from the CLI prompt.
+2026-11-15 23:02:17 INFO    Connecting to kissovi.cz:22211 (Cisco IOS-XR), attempt 1/3
+2026-11-15 23:02:20 INFO      kissovi.cz:22211 is r11 (Cisco IOS-XR) -> part of this change
+2026-11-15 23:02:20 INFO    Connecting to kissovi.cz:22213 (Nokia SR OS), attempt 1/3
+2026-11-15 23:02:26 INFO      kissovi.cz:22213 is r13 (Nokia SR OS) -> part of this change
+2026-11-15 23:02:26 INFO    ==============================================================================
+2026-11-15 23:02:26 INFO    STEP 2: Pre-checks
+2026-11-15 23:02:26 INFO    ==============================================================================
+2026-11-15 23:02:26 INFO      Confirm the back-to-back link is up on both ends and reachable by ping, and save the current loopback / IS-IS configuration for reference.
+2026-11-15 23:02:27 DEBUG   [r11] show ip interface brief
+    | Sun Nov 15 22:02:26.865 UTC
+    | 
+    | Interface                      IP-Address      Status          Protocol Vrf-Name
+    | MgmtEth0/RP0/CPU0/0            172.20.22.11    Up              Up       Mgmt-intf
+    | GigabitEthernet0/0/0/1         10.11.13.11     Up              Up       default 
+2026-11-15 23:02:27 INFO    [r11] link interface up                        PASS  GigabitEthernet0/0/0/1 10.11.13.11 Up/Up
+2026-11-15 23:02:27 DEBUG   [r11] show running-config interface Loopback0
+    | Sun Nov 15 22:02:27.506 UTC
+    | % No such configuration item(s)
+2026-11-15 23:02:28 DEBUG   [r11] show running-config router isis
+    | Sun Nov 15 22:02:28.279 UTC
+    | % No such configuration item(s)
+2026-11-15 23:02:28 INFO    [r11] pre-change configuration snapshot written to log
+2026-11-15 23:02:29 DEBUG   [r13] show router interface
+    | ===============================================================================
+    | Interface Table (Router: Base)
+    | ===============================================================================
+    | Interface-Name                   Adm       Opr(v4/v6)  Mode    Port/SapId
+    |    IP-Address                                                  PfxState
+    | -------------------------------------------------------------------------------
+    | To-Peering-LAN                   Up        Up/Down     Network 1/1/c1/1
+    |    10.11.13.13/24                                              n/a
+    | system                           Up        Down/Down   Network system
+    |    -                                                           -
+    | -------------------------------------------------------------------------------
+    | Interfaces : 2
+    | ===============================================================================
+2026-11-15 23:02:29 INFO    [r13] link interface up                        PASS  To-Peering-LAN 10.11.13.13/24 Up/Up
+2026-11-15 23:02:29 DEBUG   [r13] admin show configuration /configure router "Base"
+    |     interface "To-Peering-LAN" {
+    |         port 1/1/c1/1
+    |         ipv4 {
+    |             primary {
+    |                 address 10.11.13.13
+    |                 prefix-length 24
+    |             }
+    |         }
+    |     }
+2026-11-15 23:02:29 INFO    [r13] pre-change configuration snapshot written to log
+2026-11-15 23:02:30 DEBUG   [r11] ping 10.11.13.13 count 3
+    | Sun Nov 15 22:02:30.125 UTC
+    | Type escape sequence to abort.
+    | Sending 3, 100-byte ICMP Echos to 10.11.13.13 timeout is 2 seconds:
+    | !!!
+    | Success rate is 100 percent (3/3), round-trip min/avg/max = 4/4/5 ms
+2026-11-15 23:02:30 INFO    [r11] ping peer link address 10.11.13.13       PASS  3/3 replies
+2026-11-15 23:02:33 DEBUG   [r13] ping 10.11.13.11 count 3
+    | PING 10.11.13.11 56 data bytes
+    | 64 bytes from 10.11.13.11: icmp_seq=1 ttl=255 time=3.61ms.
+    | 64 bytes from 10.11.13.11: icmp_seq=2 ttl=255 time=3.42ms.
+    | . 64 bytes from 10.11.13.11: icmp_seq=3 ttl=255 time=3.28ms.
+    | 
+    | ---- 10.11.13.11 PING Statistics ----
+    | 3 packets transmitted, 3 packets received, 0.00% packet loss
+    | round-trip min = 3.28ms, avg = 3.44ms, max = 3.61ms, stddev = 0.137ms
+2026-11-15 23:02:33 INFO    [r13] ping peer link address 10.11.13.11       PASS  3/3 replies
+2026-11-15 23:02:33 INFO    ==============================================================================
+2026-11-15 23:02:33 INFO    STEP 3: Check loopback + IS-IS configuration (dry run)
+2026-11-15 23:02:33 INFO    ==============================================================================
+2026-11-15 23:02:33 INFO      Load the loopback and IS-IS configuration together into the candidate config, log the diff and the validation result, then discard it. Nothing is committed.
+2026-11-15 23:02:33 DEBUG   [r11] configuration commands to send
+    | interface Loopback0
+    |  description isis_lab.py: IS-IS loopback
+    |  ipv4 address 10.0.0.11 255.255.255.255
+    | root
+    | router isis LAB
+    |  is-type level-2-only
+    |  net 49.0001.0100.0000.0011.00
+    |  address-family ipv4 unicast
+    |   metric-style wide
+    |  exit
+    |  interface Loopback0
+    |   passive
+    |   address-family ipv4 unicast
+    |   exit
+    |  exit
+    |  interface GigabitEthernet0/0/0/1
+    |   point-to-point
+    |   address-family ipv4 unicast
+    | root
+2026-11-15 23:02:35 DEBUG   [r11] configuration session output
+    | configure terminal
+    | 
+    | Sun Nov 15 22:02:33.335 UTC
+    | RP/0/RP0/CPU0:r11(config)#interface Loopback0
+    | 
+    | RP/0/RP0/CPU0:r11(config-if)# description isis_lab.py: IS-IS loopback
+    | 
+    | RP/0/RP0/CPU0:r11(config-if)# ipv4 address 10.0.0.11 255.255.255.255
+    | 
+    | RP/0/RP0/CPU0:r11(config-if)#root
+    | 
+    | RP/0/RP0/CPU0:r11(config)#router isis LAB
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis)# is-type level-2-only
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis)# net 49.0001.0100.0000.0011.00
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis)# address-family ipv4 unicast
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-af)#  metric-style wide
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-af)# exit
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis)# interface Loopback0
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if)#  passive
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if)#  address-family ipv4 unicast
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if-af)#  exit
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if)# exit
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis)# interface GigabitEthernet0/0/0/1
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if)#  point-to-point
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if)#  address-family ipv4 unicast
+    | 
+    | RP/0/RP0/CPU0:r11(config-isis-if-af)#root
+    | 
+    | RP/0/RP0/CPU0:r11(config)#
+2026-11-15 23:02:36 DEBUG   [r11] candidate changes (diff)
+    | Sun Nov 15 22:02:36.009 UTC
+    | !! Building configuration...
+    | !! IOS XR Configuration 24.3.2
+    | interface Loopback0
+    |  description isis_lab.py: IS-IS loopback
+    |  ipv4 address 10.0.0.11 255.255.255.255
+    | !
+    | router isis LAB
+    |  is-type level-2-only
+    |  net 49.0001.0100.0000.0011.00
+    |  address-family ipv4 unicast
+    |   metric-style wide
+    |  !
+    |  interface Loopback0
+    |   passive
+    |   address-family ipv4 unicast
+    |   !
+    |  !
+    |  interface GigabitEthernet0/0/0/1
+    |   point-to-point
+    |   address-family ipv4 unicast
+    |   !
+    |  !
+    | !
+    | end
+2026-11-15 23:02:36 INFO    [r11] loopback+isis: candidate check (discarded) PASS  
+2026-11-15 23:02:36 DEBUG   [r13] configuration commands to send
+    | /configure router "Base" interface "loopback0" loopback
+    | /configure router "Base" interface "loopback0" description "isis_lab.py: IS-IS loopback"
+    | /configure router "Base" interface "loopback0" ipv4 primary address 10.0.0.13
+    | /configure router "Base" interface "loopback0" ipv4 primary prefix-length 32
+    | /configure router "Base" isis 0 admin-state enable
+    | /configure router "Base" isis 0 level-capability 2
+    | /configure router "Base" isis 0 area-address [49.0001]
+    | /configure router "Base" isis 0 system-id 0100.0000.0013
+    | /configure router "Base" isis 0 level 2 wide-metrics-only true
+    | /configure router "Base" isis 0 interface "loopback0" passive true
+    | /configure router "Base" isis 0 interface "To-Peering-LAN" interface-type point-to-point
+2026-11-15 23:02:37 DEBUG   [r13] configuration session output
+    | r13# /configure router "Base" interface "loopback0" loopback
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" interface "loopback0" description "isis_lab.py: IS-IS loopback"
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" interface "loopback0" ipv4 primary address 10.0.0.13
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" interface "loopback0" ipv4 primary prefix-length 32
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 admin-state enable
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 level-capability 2
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 area-address [49.0001]
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 system-id 0100.0000.0013
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 level 2 wide-metrics-only true
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 interface "loopback0" passive true
+    | 
+    | *(ex)[/]
+    | A:admin@r13# /configure router "Base" isis 0 interface "To-Peering-LAN" interface-type point-to-point
+    | 
+    | *(ex)[/]
+    | A:admin@r13# 
+2026-11-15 23:02:38 DEBUG   [r13] validate
+    | (empty)
+2026-11-15 23:02:38 DEBUG   [r13] candidate changes (diff)
+    |     configure {
+    |         router "Base" {
+    | +           interface "loopback0" {
+    | +               description "isis_lab.py: IS-IS loopback"
+    | +               loopback
+    | +               ipv4 {
+    | +                   primary {
+    | +                       address 10.0.0.13
+    | +                       prefix-length 32
+    | +                   }
+    | +               }
+    | +           }
+    | +           isis 0 {
+    | +               admin-state enable
+    | +               level-capability 2
+    | +               system-id 0100.0000.0013
+    | +               area-address [49.0001]
+    | +               interface "To-Peering-LAN" {
+    | +                   interface-type point-to-point
+    | +               }
+    | +               interface "loopback0" {
+    | +                   passive true
+    | +               }
+    | +               level 2 {
+    | +                   wide-metrics-only true
+    | +               }
+    | +           }
+    |         }
+    |     }
+2026-11-15 23:02:39 INFO    [r13] loopback+isis: candidate check (discarded) PASS  
+2026-11-15 23:02:39 INFO    Check mode: configuration validated and discarded, nothing committed.
+2026-11-15 23:02:39 INFO    ==============================================================================
+2026-11-15 23:02:39 INFO    SUMMARY
+2026-11-15 23:02:39 INFO    ==============================================================================
+2026-11-15 23:02:39 INFO      r11  link interface up                          PASS GigabitEthernet0/0/0/1 10.11.13.11 Up/Up
+2026-11-15 23:02:39 INFO      r11  ping peer link address 10.11.13.13         PASS 3/3 replies
+2026-11-15 23:02:39 INFO      r11  loopback+isis: candidate check (discarded) PASS 
+2026-11-15 23:02:39 INFO      r13  link interface up                          PASS To-Peering-LAN 10.11.13.13/24 Up/Up
+2026-11-15 23:02:39 INFO      r13  ping peer link address 10.11.13.11         PASS 3/3 replies
+2026-11-15 23:02:39 INFO      r13  loopback+isis: candidate check (discarded) PASS 
+2026-11-15 23:02:39 INFO    Result: SUCCESS  (6/6 checks passed, 21.4s)
+2026-11-15 23:02:39 INFO    Full log: logs/isis_lab_check_20261115-230217.log

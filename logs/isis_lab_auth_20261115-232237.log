@@ -1,0 +1,244 @@
+2026-11-15 23:22:37 INFO    IS-IS authentication change: r11 (IOS-XR) <-> r13 (SR OS)   mode=auth
+2026-11-15 23:22:37 INFO    Log file: logs/isis_lab_auth_20261115-232237.log
+2026-11-15 23:22:37 INFO    Design: area 49.0001, level-2 only, point-to-point link, wide metrics, loopbacks advertised as passive
+2026-11-15 23:22:37 INFO    Authentication: keychain ISIS-KC, key-id 1, HMAC-SHA-256, applied to IS-IS Hellos (link interface) and LSP/SNPs (instance)
+2026-11-15 23:22:37 INFO      r11: loopback 10.0.0.11/32 on Loopback0, link GigabitEthernet0/0/0/1, NET 49.0001.0100.0000.0011.00
+2026-11-15 23:22:37 INFO      r13: loopback 10.0.0.13/32 on loopback0, link port 1/1/c1/1, NET 49.0001.0100.0000.0013.00
+2026-11-15 23:22:37 INFO    ==============================================================================
+2026-11-15 23:22:37 INFO    STEP 1: Connect and identify routers
+2026-11-15 23:22:37 INFO    ==============================================================================
+2026-11-15 23:22:37 INFO      Read devices.csv, open an SSH session to each device and match it to r11/r13 by hostname taken from the CLI prompt.
+2026-11-15 23:22:37 INFO    Connecting to kissovi.cz:22211 (Cisco IOS-XR), attempt 1/3
+2026-11-15 23:22:39 INFO      kissovi.cz:22211 is r11 (Cisco IOS-XR) -> part of this change
+2026-11-15 23:22:39 INFO    Connecting to kissovi.cz:22213 (Nokia SR OS), attempt 1/3
+2026-11-15 23:22:45 INFO      kissovi.cz:22213 is r13 (Nokia SR OS) -> part of this change
+2026-11-15 23:22:45 INFO    Authentication key loaded from .isis_auth_key (value masked in logs)
+2026-11-15 23:22:45 INFO    ==============================================================================
+2026-11-15 23:22:45 INFO    STEP 2: Pre-checks (baseline)
+2026-11-15 23:22:45 INFO    ==============================================================================
+2026-11-15 23:22:45 INFO      Confirm the link is up, the IS-IS adjacency is Up and each router has the peer's loopback via IS-IS before touching authentication. Record each router's own LSP sequence number so we can later prove new LSPs were generated and accepted. Save the current IS-IS and keychain configuration.
+2026-11-15 23:22:46 DEBUG   [r11] show ip interface brief
+    | Sun Nov 15 22:22:46.107 UTC
+    | 
+    | Interface                      IP-Address      Status          Protocol Vrf-Name
+    | Loopback0                      10.0.0.11       Up              Up       default 
+    | MgmtEth0/RP0/CPU0/0            172.20.22.11    Up              Up       Mgmt-intf
+    | GigabitEthernet0/0/0/1         10.11.13.11     Up              Up       default 
+2026-11-15 23:22:46 INFO    [r11] link interface up                        PASS  GigabitEthernet0/0/0/1 10.11.13.11 Up/Up
+2026-11-15 23:22:46 DEBUG   [r13] show router interface
+    | ===============================================================================
+    | Interface Table (Router: Base)
+    | ===============================================================================
+    | Interface-Name                   Adm       Opr(v4/v6)  Mode    Port/SapId
+    |    IP-Address                                                  PfxState
+    | -------------------------------------------------------------------------------
+    | To-Peering-LAN                   Up        Up/Down     Network 1/1/c1/1
+    |    10.11.13.13/24                                              n/a
+    | loopback0                        Up        Up/Down     Network loopback
+    |    10.0.0.13/32                                                n/a
+    | system                           Up        Down/Down   Network system
+    |    -                                                           -
+    | -------------------------------------------------------------------------------
+    | Interfaces : 3
+    | ===============================================================================
+2026-11-15 23:22:46 INFO    [r13] link interface up                        PASS  To-Peering-LAN 10.11.13.13/24 Up/Up
+2026-11-15 23:22:47 DEBUG   [r11] ping 10.11.13.13 count 3
+    | Sun Nov 15 22:22:47.308 UTC
+    | Type escape sequence to abort.
+    | Sending 3, 100-byte ICMP Echos to 10.11.13.13 timeout is 2 seconds:
+    | !!!
+    | Success rate is 100 percent (3/3), round-trip min/avg/max = 4/4/5 ms
+2026-11-15 23:22:47 INFO    [r11] ping peer link address 10.11.13.13       PASS  3/3 replies
+2026-11-15 23:22:50 DEBUG   [r13] ping 10.11.13.11 count 3
+    | PING 10.11.13.11 56 data bytes
+    | 64 bytes from 10.11.13.11: icmp_seq=1 ttl=255 time=3.41ms.
+    | 64 bytes from 10.11.13.11: icmp_seq=2 ttl=255 time=3.36ms.
+    | . 64 bytes from 10.11.13.11: icmp_seq=3 ttl=255 time=3.04ms.
+    | 
+    | ---- 10.11.13.11 PING Statistics ----
+    | 3 packets transmitted, 3 packets received, 0.00% packet loss
+    | round-trip min = 3.04ms, avg = 3.27ms, max = 3.41ms, stddev = 0.163ms
+2026-11-15 23:22:50 INFO    [r13] ping peer link address 10.11.13.11       PASS  3/3 replies
+2026-11-15 23:22:51 DEBUG   [r11] show isis adjacency
+    | Sun Nov 15 22:22:50.900 UTC
+    | 
+    | IS-IS LAB Level-2 adjacencies:
+    | System Id      Interface                SNPA           State Hold Changed  NSF IPv4 IPv6
+    |                                                                                BFD  BFD 
+    | r13            Gi0/0/0/1                *PtoP*         Up    23   00:18:17 No  None None
+    | 
+    | Total adjacency count: 1
+2026-11-15 23:22:51 DEBUG   [r13] show router isis adjacency
+    | ===============================================================================
+    | Rtr Base ISIS Instance 0 Adjacency 
+    | ===============================================================================
+    | System ID                Usage State Hold Interface                     MT-ID
+    | -------------------------------------------------------------------------------
+    | r11                      L2    Up    30   To-Peering-LAN                0
+    | -------------------------------------------------------------------------------
+    | Adjacencies : 1
+    | ===============================================================================
+2026-11-15 23:22:51 INFO    [r11] baseline IS-IS adjacency Up              PASS  neighbour r13
+2026-11-15 23:22:51 INFO    [r13] baseline IS-IS adjacency Up              PASS  neighbour r11
+2026-11-15 23:22:52 DEBUG   [r11] show isis database
+    | Sun Nov 15 22:22:52.081 UTC
+    | 
+    | IS-IS LAB (Level-2) Link State Database
+    | LSPID                 LSP Seq Num  LSP Checksum  LSP Holdtime/Rcvd  ATT/P/OL
+    | r11.00-00           * 0x00000005   0xe286        926  /*            0/0/0
+    | r13.00-00             0x00000003   0xd1d4        677  /1200         0/0/0
+    | 
+    |  Total Level-2 LSP count: 2     Local Level-2 LSP count: 1
+2026-11-15 23:22:52 INFO    [r11] own LSP r11.00-00 sequence number 0x5
+2026-11-15 23:22:52 DEBUG   [r11] show running-config interface Loopback0
+    | Sun Nov 15 22:22:52.694 UTC
+    | interface Loopback0
+    |  description isis_lab.py: IS-IS loopback
+    |  ipv4 address 10.0.0.11 255.255.255.255
+    | !
+2026-11-15 23:22:53 DEBUG   [r11] show running-config router isis
+    | Sun Nov 15 22:22:53.431 UTC
+    | router isis LAB
+    |  is-type level-2-only
+    |  net 49.0001.0100.0000.0011.00
+    |  address-family ipv4 unicast
+    |   metric-style wide
+    |  !
+    |  interface Loopback0
+    |   passive
+    |   address-family ipv4 unicast
+    |   !
+    |  !
+    |  interface GigabitEthernet0/0/0/1
+    |   point-to-point
+    |   address-family ipv4 unicast
+    |   !
+    |  !
+    | !
+2026-11-15 23:22:54 DEBUG   [r11] show running-config key chain ISIS-KC
+    | Sun Nov 15 22:22:54.161 UTC
+    | % No such configuration item(s)
+2026-11-15 23:22:54 INFO    [r11] pre-change configuration snapshot written to log
+2026-11-15 23:22:54 DEBUG   [r13] show router isis database
+    | ===============================================================================
+    | Rtr Base ISIS Instance 0 Database 
+    | ===============================================================================
+    | LSP ID                                  Sequence  Checksum Lifetime Attributes
+    | -------------------------------------------------------------------------------
+    | 
+    | Displaying Level 1 database
+    | -------------------------------------------------------------------------------
+    | Level (1) LSP Count : 0
+    | 
+    | Displaying Level 2 database
+    | -------------------------------------------------------------------------------
+    | r11.00-00                               0x5       0xe286   924      L1L2
+    | r13.00-00                               0x3       0xd1d4   675      L1L2
+    | Level (2) LSP Count : 2
+    | ===============================================================================
+2026-11-15 23:22:54 INFO    [r13] own LSP r13.00-00 sequence number 0x3
+2026-11-15 23:22:55 DEBUG   [r13] admin show configuration /configure router "Base"
+    |     interface "To-Peering-LAN" {
+    |         port 1/1/c1/1
+    |         ipv4 {
+    |             primary {
+    |                 address 10.11.13.13
+    |                 prefix-length 24
+    |             }
+    |         }
+    |     }
+    |     interface "loopback0" {
+    |         description "isis_lab.py: IS-IS loopback"
+    |         loopback
+    |         ipv4 {
+    |             primary {
+    |                 address 10.0.0.13
+    |                 prefix-length 32
+    |             }
+    |         }
+    |     }
+    |     isis 0 {
+    |         admin-state enable
+    |         level-capability 2
+    |         system-id 0100.0000.0013
+    |         area-address [49.0001]
+    |         interface "To-Peering-LAN" {
+    |             interface-type point-to-point
+    |         }
+    |         interface "loopback0" {
+    |             passive true
+    |         }
+    |         level 2 {
+    |             wide-metrics-only true
+    |         }
+    |     }
+2026-11-15 23:22:56 DEBUG   [r13] admin show configuration /configure system security keychains
+    | (empty)
+2026-11-15 23:22:56 INFO    [r13] pre-change configuration snapshot written to log
+2026-11-15 23:22:56 INFO    ==============================================================================
+2026-11-15 23:22:56 INFO    STEP 3: Configure HMAC-SHA-256 keychain
+2026-11-15 23:22:56 INFO    ==============================================================================
+2026-11-15 23:22:56 INFO      Create keychain 'ISIS-KC' with key-id 1, algorithm HMAC-SHA-256, valid from 2024-01-01 with no expiry, on both routers. The keychain is not referenced by IS-IS yet, so this step has no traffic impact. Both platforms use RFC 5310 generic cryptographic authentication (key-id + HMAC-SHA-256), so key-id and key must match on both ends.
+2026-11-15 23:22:56 DEBUG   [r11] configuration commands to send
+    | key chain ISIS-KC
+    |  key 1
+    |   accept-lifetime 00:00:00 january 01 2024 infinite
+    |   send-lifetime 00:00:00 january 01 2024 infinite
+    |   cryptographic-algorithm HMAC-SHA-256
+    |   key-string password <masked>
+    | root
+2026-11-15 23:22:57 DEBUG   [r11] configuration session output
+    | configure terminal
+    | 
+    | Sun Nov 15 22:22:56.190 UTC
+    | RP/0/RP0/CPU0:r11(config)#key chain ISIS-KC
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC)# key 1
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC-1)#  accept-lifetime 00:00:00 january 01 2024 infinite
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC-1)#  send-lifetime 00:00:00 january 01 2024 infinite
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC-1)#  cryptographic-algorithm HMAC-SHA-256
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC-1)#  key-string password <masked>
+    | 
+    | RP/0/RP0/CPU0:r11(config-ISIS-KC-1)#root
+    | 
+    | RP/0/RP0/CPU0:r11(config)#
+2026-11-15 23:22:57 DEBUG   [r11] candidate changes (diff)
+    | Sun Nov 15 22:22:57.550 UTC
+    | !! Building configuration...
+    | !! IOS XR Configuration 24.3.2
+    | key chain ISIS-KC
+    |  key 1
+    |   accept-lifetime 00:00:00 january 01 2024 infinite
+    |   key-string password <masked>
+    |   send-lifetime 00:00:00 january 01 2024 infinite
+    |   cryptographic-algorithm HMAC-SHA-256
+    |  !
+    | !
+    | end
+2026-11-15 23:23:00 DEBUG   [r11] commit failed
+    | Commit failed with the following errors:
+    | 
+    | commit comment isis_lab.py keychain
+    | 
+    | Sun Nov 15 22:22:57.912 UTC
+    | 
+    | % Failed to commit one or more configuration items during a pseudo-atomic operation. All changes made have been reverted. Please issue 'show configuration failed [inheritance]' from this session to view the errors
+    | RP/0/RP0/CPU0:r11(config)#
+2026-11-15 23:23:00 ERROR   [r11] keychain: commit                         FAIL  Commit failed with the following errors:
+2026-11-15 23:23:00 ERROR   Aborted after a failed step - see above.
+2026-11-15 23:23:03 INFO    ==============================================================================
+2026-11-15 23:23:03 INFO    SUMMARY
+2026-11-15 23:23:03 INFO    ==============================================================================
+2026-11-15 23:23:03 INFO      r11  link interface up                          PASS GigabitEthernet0/0/0/1 10.11.13.11 Up/Up
+2026-11-15 23:23:03 INFO      r11  ping peer link address 10.11.13.13         PASS 3/3 replies
+2026-11-15 23:23:03 INFO      r11  baseline IS-IS adjacency Up                PASS neighbour r13
+2026-11-15 23:23:03 INFO      r11  keychain: commit                           FAIL Commit failed with the following errors:
+2026-11-15 23:23:03 INFO      r13  link interface up                          PASS To-Peering-LAN 10.11.13.13/24 Up/Up
+2026-11-15 23:23:03 INFO      r13  ping peer link address 10.11.13.11         PASS 3/3 replies
+2026-11-15 23:23:03 INFO      r13  baseline IS-IS adjacency Up                PASS neighbour r11
+2026-11-15 23:23:03 INFO    Result: FAILED  (6/7 checks passed, 25.8s)
+2026-11-15 23:23:03 INFO    Full log: logs/isis_lab_auth_20261115-232237.log
